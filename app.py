@@ -2,6 +2,7 @@ import streamlit as st
 import numpy as np
 import pandas as pd
 import yfinance as yf
+import requests
 from tensorflow.keras.models import load_model
 from sklearn.preprocessing import MinMaxScaler
 import matplotlib.pyplot as plt
@@ -19,7 +20,7 @@ model = load_model("Stock Predictions Model.keras")
 # ---------------- HEADER ----------------
 st.markdown(
     """
-    <h1 style='text-align: center; color: #00BFFF;'>
+    <h1 style='text-align: center; color:#00BFFF;'>
         📈 AI Stock Trend Prediction App
     </h1>
     """,
@@ -31,32 +32,33 @@ st.write("Predict future stock trends using Deep Learning.")
 # ---------------- SIDEBAR ----------------
 st.sidebar.header("Settings")
 
-stock = st.sidebar.text_input("Enter Stock Symbol", "GOOG")
-
-start_date = st.sidebar.date_input(
-    "Start Date",
-    pd.to_datetime("2015-01-01")
-)
-
-end_date = st.sidebar.date_input(
-    "End Date",
-    pd.to_datetime("today")
+stock = st.sidebar.text_input(
+    "Enter Stock Symbol",
+    "GOOG"
 )
 
 predict_button = st.sidebar.button("Predict")
 
-# ---------------- RUN ONLY WHEN BUTTON CLICKED ----------------
+# ---------------- MAIN ----------------
 if predict_button:
 
     # ---------------- FETCH DATA ----------------
     with st.spinner("Fetching stock data..."):
 
         try:
-            ticker = yf.Ticker(stock)
+            session = requests.Session()
+
+            session.headers.update({
+                "User-Agent": "Mozilla/5.0"
+            })
+
+            ticker = yf.Ticker(
+                stock,
+                session=session
+            )
 
             data = ticker.history(
-                start=start_date,
-                end=end_date,
+                period="5y",
                 auto_adjust=True
             )
 
@@ -73,20 +75,26 @@ if predict_button:
     # ---------------- STOCK DATA ----------------
     st.subheader(f"{stock} Stock Data")
 
-    st.dataframe(data.tail(10), use_container_width=True)
+    st.dataframe(
+        data.tail(10),
+        use_container_width=True
+    )
 
     # ---------------- CLOSE PRICE CHART ----------------
     st.subheader("Closing Price")
 
-    fig = plt.figure(figsize=(12, 6))
+    fig1 = plt.figure(figsize=(12, 6))
 
-    plt.plot(data["Close"], label='Closing Price')
+    plt.plot(
+        data["Close"],
+        label="Closing Price"
+    )
 
     plt.xlabel("Date")
     plt.ylabel("Price")
     plt.legend()
 
-    st.pyplot(fig)
+    st.pyplot(fig1)
 
     # ---------------- MOVING AVERAGES ----------------
     ma50 = data["Close"].rolling(50).mean()
@@ -97,10 +105,25 @@ if predict_button:
 
     fig2 = plt.figure(figsize=(12, 6))
 
-    plt.plot(data["Close"], label='Close Price')
-    plt.plot(ma50, label='MA50')
-    plt.plot(ma100, label='MA100')
-    plt.plot(ma200, label='MA200')
+    plt.plot(
+        data["Close"],
+        label="Close Price"
+    )
+
+    plt.plot(
+        ma50,
+        label="MA50"
+    )
+
+    plt.plot(
+        ma100,
+        label="MA100"
+    )
+
+    plt.plot(
+        ma200,
+        label="MA200"
+    )
 
     plt.xlabel("Date")
     plt.ylabel("Price")
@@ -108,16 +131,20 @@ if predict_button:
 
     st.pyplot(fig2)
 
-    # ---------------- TRAIN TEST SPLIT ----------------
+    # ---------------- PREPARE DATA ----------------
+    close_data = data[["Close"]]
+
     data_train = pd.DataFrame(
-        data["Close"][0: int(len(data) * 0.80)]
+        close_data[: int(len(close_data) * 0.80)]
     )
 
     data_test = pd.DataFrame(
-        data["Close"][int(len(data) * 0.80): len(data)]
+        close_data[int(len(close_data) * 0.80):]
     )
 
-    scaler = MinMaxScaler(feature_range=(0, 1))
+    scaler = MinMaxScaler(
+        feature_range=(0, 1)
+    )
 
     past_100_days = data_train.tail(100)
 
@@ -128,13 +155,18 @@ if predict_button:
 
     input_data = scaler.fit_transform(final_df)
 
-    # ---------------- PREPARE DATA ----------------
     x_test = []
     y_test = []
 
     for i in range(100, input_data.shape[0]):
-        x_test.append(input_data[i-100:i])
-        y_test.append(input_data[i, 0])
+
+        x_test.append(
+            input_data[i-100:i]
+        )
+
+        y_test.append(
+            input_data[i, 0]
+        )
 
     x_test = np.array(x_test)
     y_test = np.array(y_test)
@@ -147,13 +179,20 @@ if predict_button:
     predictions = predictions * scale_factor
     y_test = y_test * scale_factor
 
-    # ---------------- PREDICTION GRAPH ----------------
+    # ---------------- PREDICTION CHART ----------------
     st.subheader("Actual vs Predicted Price")
 
     fig3 = plt.figure(figsize=(12, 6))
 
-    plt.plot(y_test, label='Actual Price')
-    plt.plot(predictions, label='Predicted Price')
+    plt.plot(
+        y_test,
+        label="Actual Price"
+    )
+
+    plt.plot(
+        predictions,
+        label="Predicted Price"
+    )
 
     plt.xlabel("Time")
     plt.ylabel("Price")
@@ -186,4 +225,7 @@ if predict_button:
 
 # ---------------- FOOTER ----------------
 st.markdown("---")
-st.caption("Built with Streamlit + TensorFlow + Yahoo Finance")
+
+st.caption(
+    "Built with Streamlit + TensorFlow + Yahoo Finance"
+)

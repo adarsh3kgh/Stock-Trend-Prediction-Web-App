@@ -44,7 +44,7 @@ A deep learning-powered stock trend prediction app built with **Streamlit**, **T
 
 ## 📁 Project Structure
 
-```
+
 stock-trend-prediction-web-app/
 │
 ├── app.py                        # Main Streamlit application
@@ -52,8 +52,6 @@ stock-trend-prediction-web-app/
 ├── requirements.txt              # Python dependencies
 ├── .python-version               # Pins Python 3.11 for deployment
 └── README.md                     # You are here
-```
-
 ---
 
 ## ⚙️ Run Locally

@@ -46,10 +46,7 @@ end_date = st.sidebar.date_input(
 # ---------------- FETCH DATA ----------------
 with st.spinner("Fetching stock data..."):
 
-import yfinance as yf
-
 ticker = yf.Ticker(stock)
-
 data = ticker.history(
     start=start_date,
     end=end_date,

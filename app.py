@@ -223,7 +223,7 @@ PALETTE = {
 # ─────────────────────────────────────────────
 @st.cache_resource
 def load_keras_model():
-    return load_model("Stock_Predictions_Model.keras")
+    return load_model("Stock Predictions Model.keras")
 
 model = load_keras_model()
 

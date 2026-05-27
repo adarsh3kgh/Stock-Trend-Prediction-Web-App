@@ -81,7 +81,11 @@ tensorflow==2.16.1
 scikit-learn==1.5.0
 matplotlib==3.8.4
 ```
-
+| Signal | Meaning |
+|--------|---------|
+| 🟢 **BULLISH** | Model predicted price **higher** than actual — suggests upward trend |
+| 🔴 **BEARISH** | Model predicted price **lower** than actual — suggests downward trend |
+| ⚪ **NEUTRAL** | Predicted and actual are equal — no clear direction |
 ---
 
 ## ⚠️ Disclaimer

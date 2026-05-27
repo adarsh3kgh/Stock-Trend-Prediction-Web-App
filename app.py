@@ -2,7 +2,6 @@ import streamlit as st
 import numpy as np
 import pandas as pd
 import yfinance as yf
-import requests
 from tensorflow.keras.models import load_model
 from sklearn.preprocessing import MinMaxScaler
 import matplotlib.pyplot as plt
@@ -20,7 +19,7 @@ model = load_model("Stock Predictions Model.keras")
 # ---------------- HEADER ----------------
 st.markdown(
     """
-    <h1 style='text-align: center; color:#00BFFF;'>
+    <h1 style='text-align:center; color:#00BFFF;'>
         📈 AI Stock Trend Prediction App
     </h1>
     """,
@@ -34,32 +33,26 @@ st.sidebar.header("Settings")
 
 stock = st.sidebar.text_input(
     "Enter Stock Symbol",
-    "GOOG"
+    "MSFT"
 )
 
 predict_button = st.sidebar.button("Predict")
 
-# ---------------- MAIN ----------------
+# ---------------- MAIN APP ----------------
 if predict_button:
 
     # ---------------- FETCH DATA ----------------
     with st.spinner("Fetching stock data..."):
 
         try:
-            session = requests.Session()
 
-            session.headers.update({
-                "User-Agent": "Mozilla/5.0"
-            })
-
-            ticker = yf.Ticker(
+            data = yf.download(
                 stock,
-                session=session
-            )
-
-            data = ticker.history(
                 period="5y",
-                auto_adjust=True
+                interval="1d",
+                auto_adjust=True,
+                progress=False,
+                threads=False
             )
 
             if data.empty:
@@ -202,7 +195,10 @@ if predict_button:
 
     # ---------------- METRICS ----------------
     latest_actual = float(y_test[-1])
-    latest_prediction = float(predictions[-1][0])
+
+    latest_prediction = float(
+        predictions[-1][0]
+    )
 
     change = latest_prediction - latest_actual
 

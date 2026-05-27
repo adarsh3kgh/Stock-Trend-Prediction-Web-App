@@ -43,112 +43,146 @@ end_date = st.sidebar.date_input(
     pd.to_datetime("today")
 )
 
-# ---------------- FETCH DATA ----------------
-with st.spinner("Fetching stock data..."):
+predict_button = st.sidebar.button("Predict")
 
-ticker = yf.Ticker(stock)
-data = ticker.history(
-    start=start_date,
-    end=end_date,
-    auto_adjust=True
-)
+# ---------------- RUN ONLY WHEN BUTTON CLICKED ----------------
+if predict_button:
 
-if data.empty:
-    st.error("Unable to fetch stock data.")
-    st.stop()
+    # ---------------- FETCH DATA ----------------
+    with st.spinner("Fetching stock data..."):
 
-data.reset_index(inplace=True)
-# ---------------- STOCK DATA ----------------
-st.subheader(f"{stock} Stock Data")
+        try:
+            ticker = yf.Ticker(stock)
 
-st.dataframe(data.tail(10), use_container_width=True)
+            data = ticker.history(
+                start=start_date,
+                end=end_date,
+                auto_adjust=True
+            )
 
-# ---------------- CLOSE PRICE CHART ----------------
-st.subheader("Closing Price")
+            if data.empty:
+                st.error("Unable to fetch stock data.")
+                st.stop()
 
-fig = plt.figure(figsize=(12, 6))
-plt.plot(data.Close, label='Closing Price')
-plt.xlabel("Date")
-plt.ylabel("Price")
-plt.legend()
+            data.reset_index(inplace=True)
 
-st.pyplot(fig)
+        except Exception as e:
+            st.error(f"Error fetching stock data: {e}")
+            st.stop()
 
-# ---------------- MOVING AVERAGES ----------------
-ma50 = data.Close.rolling(50).mean()
-ma100 = data.Close.rolling(100).mean()
-ma200 = data.Close.rolling(200).mean()
+    # ---------------- STOCK DATA ----------------
+    st.subheader(f"{stock} Stock Data")
 
-st.subheader("Moving Averages")
+    st.dataframe(data.tail(10), use_container_width=True)
 
-fig2 = plt.figure(figsize=(12, 6))
+    # ---------------- CLOSE PRICE CHART ----------------
+    st.subheader("Closing Price")
 
-plt.plot(data.Close, label='Close Price')
-plt.plot(ma50, label='MA50')
-plt.plot(ma100, label='MA100')
-plt.plot(ma200, label='MA200')
+    fig = plt.figure(figsize=(12, 6))
 
-plt.xlabel("Date")
-plt.ylabel("Price")
-plt.legend()
+    plt.plot(data["Close"], label='Closing Price')
 
-st.pyplot(fig2)
+    plt.xlabel("Date")
+    plt.ylabel("Price")
+    plt.legend()
 
-# ---------------- TRAIN TEST SPLIT ----------------
-data_train = pd.DataFrame(data.Close[: int(len(data) * 0.80)])
-data_test = pd.DataFrame(data.Close[int(len(data) * 0.80):])
+    st.pyplot(fig)
 
-scaler = MinMaxScaler(feature_range=(0, 1))
+    # ---------------- MOVING AVERAGES ----------------
+    ma50 = data["Close"].rolling(50).mean()
+    ma100 = data["Close"].rolling(100).mean()
+    ma200 = data["Close"].rolling(200).mean()
 
-past_100_days = data_train.tail(100)
+    st.subheader("Moving Averages")
 
-final_df = pd.concat([past_100_days, data_test], ignore_index=True)
+    fig2 = plt.figure(figsize=(12, 6))
 
-input_data = scaler.fit_transform(final_df)
+    plt.plot(data["Close"], label='Close Price')
+    plt.plot(ma50, label='MA50')
+    plt.plot(ma100, label='MA100')
+    plt.plot(ma200, label='MA200')
 
-# ---------------- PREPARE DATA ----------------
-x_test = []
-y_test = []
+    plt.xlabel("Date")
+    plt.ylabel("Price")
+    plt.legend()
 
-for i in range(100, input_data.shape[0]):
-    x_test.append(input_data[i-100:i])
-    y_test.append(input_data[i, 0])
+    st.pyplot(fig2)
 
-x_test, y_test = np.array(x_test), np.array(y_test)
+    # ---------------- TRAIN TEST SPLIT ----------------
+    data_train = pd.DataFrame(
+        data["Close"][0: int(len(data) * 0.80)]
+    )
 
-# ---------------- PREDICTION ----------------
-predictions = model.predict(x_test)
+    data_test = pd.DataFrame(
+        data["Close"][int(len(data) * 0.80): len(data)]
+    )
 
-scale_factor = 1 / scaler.scale_[0]
+    scaler = MinMaxScaler(feature_range=(0, 1))
 
-predictions = predictions * scale_factor
-y_test = y_test * scale_factor
+    past_100_days = data_train.tail(100)
 
-# ---------------- PREDICTION GRAPH ----------------
-st.subheader("Actual vs Predicted Price")
+    final_df = pd.concat(
+        [past_100_days, data_test],
+        ignore_index=True
+    )
 
-fig3 = plt.figure(figsize=(12, 6))
+    input_data = scaler.fit_transform(final_df)
 
-plt.plot(y_test, label='Actual Price')
-plt.plot(predictions, label='Predicted Price')
+    # ---------------- PREPARE DATA ----------------
+    x_test = []
+    y_test = []
 
-plt.xlabel("Time")
-plt.ylabel("Price")
-plt.legend()
+    for i in range(100, input_data.shape[0]):
+        x_test.append(input_data[i-100:i])
+        y_test.append(input_data[i, 0])
 
-st.pyplot(fig3)
+    x_test = np.array(x_test)
+    y_test = np.array(y_test)
 
-# ---------------- METRICS ----------------
-latest_actual = float(y_test[-1])
-latest_prediction = float(predictions[-1][0])
+    # ---------------- PREDICTION ----------------
+    predictions = model.predict(x_test)
 
-change = latest_prediction - latest_actual
+    scale_factor = 1 / scaler.scale_[0]
 
-col1, col2, col3 = st.columns(3)
+    predictions = predictions * scale_factor
+    y_test = y_test * scale_factor
 
-col1.metric("Latest Actual Price", f"${latest_actual:.2f}")
-col2.metric("Predicted Price", f"${latest_prediction:.2f}")
-col3.metric("Difference", f"${change:.2f}")
+    # ---------------- PREDICTION GRAPH ----------------
+    st.subheader("Actual vs Predicted Price")
+
+    fig3 = plt.figure(figsize=(12, 6))
+
+    plt.plot(y_test, label='Actual Price')
+    plt.plot(predictions, label='Predicted Price')
+
+    plt.xlabel("Time")
+    plt.ylabel("Price")
+    plt.legend()
+
+    st.pyplot(fig3)
+
+    # ---------------- METRICS ----------------
+    latest_actual = float(y_test[-1])
+    latest_prediction = float(predictions[-1][0])
+
+    change = latest_prediction - latest_actual
+
+    col1, col2, col3 = st.columns(3)
+
+    col1.metric(
+        "Latest Actual Price",
+        f"${latest_actual:.2f}"
+    )
+
+    col2.metric(
+        "Predicted Price",
+        f"${latest_prediction:.2f}"
+    )
+
+    col3.metric(
+        "Difference",
+        f"${change:.2f}"
+    )
 
 # ---------------- FOOTER ----------------
 st.markdown("---")

@@ -46,20 +46,21 @@ end_date = st.sidebar.date_input(
 # ---------------- FETCH DATA ----------------
 with st.spinner("Fetching stock data..."):
 
-    data = yf.download(
-    stock,
+import yfinance as yf
+
+ticker = yf.Ticker(stock)
+
+data = ticker.history(
     start=start_date,
     end=end_date,
-    auto_adjust=True,
-    progress=False
+    auto_adjust=True
 )
 
 if data.empty:
-    st.error("Invalid stock symbol or no data found.")
+    st.error("Unable to fetch stock data.")
     st.stop()
 
 data.reset_index(inplace=True)
-
 # ---------------- STOCK DATA ----------------
 st.subheader(f"{stock} Stock Data")
 
